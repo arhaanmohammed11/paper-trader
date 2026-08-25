@@ -34,7 +34,8 @@ export function ChartPanel({ symbol }: Props) {
   const [interval, setIntervalId] = useState<IntervalId>("1h");
   const [range, setRange] = useState<RangeId>("1M");
   const [style, setStyle] = useState<ChartStyle>("candle_solid");
-  const [activeIndicators, setActiveIndicators] = useState<string[]>(["VOL"]);
+  // No indicators by default — a clean chart. Add them from the Indicators menu.
+  const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
   const [armedTool, setArmedTool] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
