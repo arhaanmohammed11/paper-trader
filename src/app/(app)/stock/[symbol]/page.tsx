@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { ChartPanel } from "@/components/market/ChartPanel";
+import { ChartSwitcher } from "@/components/market/ChartSwitcher";
 import { WatchButtons } from "@/components/market/WatchButtons";
 import { NewsPanel } from "@/components/news/NewsPanel";
 import { TradeTicket } from "@/components/trade/TradeTicket";
@@ -145,7 +145,7 @@ export default async function StockPage({ params }: PageProps<"/stock/[symbol]">
         <Stat label="Prev close" value={formatMoney(quote.prevClose)} />
       </dl>
 
-      <ChartPanel symbol={symbol} />
+      <ChartSwitcher symbol={symbol} exchange={instrument?.exchange ?? null} />
 
       <NewsPanel symbol={symbol} />
 
