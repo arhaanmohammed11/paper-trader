@@ -93,6 +93,27 @@ export type Database = {
         }
         Relationships: []
       }
+      chart_drawings: {
+        Row: {
+          overlays: Json
+          symbol: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          overlays?: Json
+          symbol: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          overlays?: Json
+          symbol?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       instruments: {
         Row: {
           currency: string
@@ -511,6 +532,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _apply_fill: {
+        Args: {
+          p_account_id: string
+          p_order_id: string
+          p_price: number
+          p_qty: number
+          p_quote_age_ms?: number
+          p_side: string
+          p_symbol: string
+        }
+        Returns: Json
+      }
+      execute_market_order: {
+        Args: {
+          p_account_id: string
+          p_max_quote_age?: string
+          p_qty: number
+          p_side: string
+          p_symbol: string
+        }
+        Returns: Json
+      }
       get_or_create_account: {
         Args: never
         Returns: {
@@ -562,6 +605,40 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      recompute_positions: {
+        Args: { p_account_id: string }
+        Returns: {
+          ok: boolean
+          replayed_avg: number
+          replayed_qty: number
+          stored_avg: number
+          stored_qty: number
+          symbol: string
+        }[]
+      }
+      reset_account: {
+        Args: { p_account_id: string; p_starting_cash?: number }
+        Returns: {
+          base_currency: string
+          cash: number
+          created_at: string
+          id: string
+          name: string
+          net_deposits: number
+          starting_cash: number
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      snapshot_account: {
+        Args: { p_account_id: string; p_as_of?: string }
+        Returns: undefined
       }
     }
     Enums: {

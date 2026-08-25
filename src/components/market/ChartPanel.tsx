@@ -31,8 +31,11 @@ export function ChartPanel({ symbol }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
-  const [interval, setIntervalId] = useState<IntervalId>("1h");
-  const [range, setRange] = useState<RangeId>("1M");
+  // Daily candles over five years: the long view first. If a listing is
+  // younger than that, the provider simply returns fewer bars and the chart
+  // fits to what exists.
+  const [interval, setIntervalId] = useState<IntervalId>("1D");
+  const [range, setRange] = useState<RangeId>("5Y");
   const [style, setStyle] = useState<ChartStyle>("candle_solid");
   // No indicators by default — a clean chart. Add them from the Indicators menu.
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
@@ -46,6 +49,69 @@ export function ChartPanel({ symbol }: Props) {
   // of these forever. Refs keep it reading current state.
   const rangeRef = useRef(range);
   const symbolRef = useRef(symbol);
+
+  // Guards a save while we are programmatically re-adding saved overlays:
+  // createOverlay fires the same callbacks a human drawing would, so without
+  // this the restore would race the save and could persist a half-restored set.
+  const restoringRef = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Persist every overlay on the chart. Debounced, because dragging a trend
+   * line fires continuously and each drag would otherwise be a round trip.
+   *
+   * Only timestamp/value are sent per point — `dataIndex` is a position inside
+   * the currently loaded bars, so saving it would misplace the drawing after a
+   * timeframe change.
+   */
+  const saveDrawings = useCallback(() => {
+    if (restoringRef.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+
+    saveTimer.current = setTimeout(() => {
+      const chart = chartRef.current;
+      if (!chart) return;
+
+      const overlays = chart.getOverlays().map((o) => ({
+        name: o.name,
+        points: (o.points ?? []).map((pt) => ({
+          timestamp: pt.timestamp,
+          value: pt.value,
+        })),
+        styles: o.styles,
+        lock: o.lock,
+        mode: o.mode,
+      }));
+
+      void fetch("/api/drawings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol: symbolRef.current, overlays }),
+      }).catch(() => {
+        /* a failed save is not worth interrupting the chart for */
+      });
+    }, 600);
+  }, []);
+
+  const overlayHandlers = useCallback(
+    () => ({
+      onDrawEnd: () => {
+        setArmedTool(null);
+        saveDrawings();
+        return false;
+      },
+      onRemoved: () => {
+        setArmedTool(null);
+        saveDrawings();
+        return false;
+      },
+      onPressedMoveEnd: () => {
+        saveDrawings();
+        return false;
+      },
+    }),
+    [saveDrawings],
+  );
 
   const fetchBars = useCallback(
     async (resolution: string, from: number, to: number): Promise<KLineData[]> => {
@@ -80,6 +146,7 @@ export function ChartPanel({ symbol }: Props) {
 
     symbolRef.current = symbol;
     let cancelled = false;
+    const handlers = overlayHandlers();
 
     loadKLine().then(({ init }) => {
       // Cleanup already ran (StrictMode unmounts immediately on first mount).
@@ -227,6 +294,34 @@ export function ChartPanel({ symbol }: Props) {
       for (const id of activeIndicators) {
         chart.createIndicator(id, INDICATORS.find((i) => i.id === id)?.overlay);
       }
+
+      // Restore saved drawings for this symbol.
+      void fetch(`/api/drawings?symbol=${encodeURIComponent(symbol)}`)
+        .then((r) => (r.ok ? r.json() : { overlays: [] }))
+        .then((body) => {
+          if (cancelled || !chartRef.current) return;
+          const saved = body.overlays ?? [];
+          if (saved.length === 0) return;
+
+          restoringRef.current = true;
+          try {
+            for (const o of saved) {
+              chartRef.current.createOverlay({
+                name: o.name,
+                points: o.points,
+                styles: o.styles,
+                lock: o.lock,
+                mode: o.mode ?? "weak_magnet",
+                ...handlers,
+              });
+            }
+          } finally {
+            restoringRef.current = false;
+          }
+        })
+        .catch(() => {
+          /* drawings are a nicety; never block the chart on them */
+        });
     });
 
     return () => {
@@ -241,7 +336,7 @@ export function ChartPanel({ symbol }: Props) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, dark]);
+  }, [symbol, dark, overlayHandlers]);
 
   // ---- imperative updates ------------------------------------------------
   useEffect(() => {
@@ -270,14 +365,7 @@ export function ChartPanel({ symbol }: Props) {
     chartRef.current?.createOverlay({
       name,
       mode: "weak_magnet", // snaps to OHLC when close, like TradingView
-      onDrawEnd: () => {
-        setArmedTool(null);
-        return false;
-      },
-      onRemoved: () => {
-        setArmedTool(null);
-        return false;
-      },
+      ...overlayHandlers(),
     });
   }
 
@@ -315,6 +403,7 @@ export function ChartPanel({ symbol }: Props) {
         onClear={() => {
           chartRef.current?.removeOverlay();
           setArmedTool(null);
+          saveDrawings();
         }}
       />
 
