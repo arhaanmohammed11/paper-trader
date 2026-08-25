@@ -21,15 +21,27 @@ import {
   rangeById,
 } from "@/lib/market/chartConfig";
 import { klineSync, loadKLine } from "@/lib/market/klineLoader";
+
+/** Matches the swatch colours in the Price levels panel. */
+function levelColour(kind: string): string {
+  switch (kind) {
+    case "support": return "#10b981";
+    case "resistance": return "#ef4444";
+    case "target": return "#3b82f6";
+    case "stop": return "#f59e0b";
+    default: return "#8b5cf6";
+  }
+}
 import { registerShapes } from "@/lib/market/shapes";
 
 // For the eventual TradingView swap: everything here talks to
 // /api/market/history, which already speaks TradingView's resolution vocabulary
 // and returns its {s,t,o,h,l,c,v} shape. This file is the whole job.
 
-type Props = { symbol: string };
+type Level = { id: string; price: number; kind: string; label: string | null };
+type Props = { symbol: string; levels?: Level[] };
 
-export function ChartPanel({ symbol }: Props) {
+export function ChartPanel({ symbol, levels = [] }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
@@ -79,7 +91,12 @@ export function ChartPanel({ symbol }: Props) {
       const chart = chartRef.current;
       if (!chart) return;
 
-      const overlays = chart.getOverlays().map((o) => ({
+      const overlays = chart
+        .getOverlays()
+        // Locked overlays are the price levels we injected; they belong to the
+        // levels table, and saving them here would duplicate them on reload.
+        .filter((o) => !o.lock)
+        .map((o) => ({
         name: o.name,
         points: (o.points ?? []).map((pt) => ({
           timestamp: pt.timestamp,
@@ -305,6 +322,20 @@ export function ChartPanel({ symbol }: Props) {
         chart.createIndicator(id, INDICATORS.find((i) => i.id === id)?.overlay);
       }
 
+      // Saved price levels, drawn as locked horizontal lines. Locked because
+      // they are owned by the Price levels panel — dragging one here would
+      // change what the chart shows without changing what is stored.
+      for (const lv of levels) {
+        chart.createOverlay({
+          name: "horizontalStraightLine",
+          points: [{ value: Number(lv.price) }],
+          lock: true,
+          styles: {
+            line: { color: levelColour(lv.kind), size: 1, style: "dashed" },
+          },
+        });
+      }
+
       // Restore saved drawings for this symbol.
       void fetch(`/api/drawings?symbol=${encodeURIComponent(symbol)}`)
         .then((r) => (r.ok ? r.json() : { overlays: [] }))
@@ -346,7 +377,7 @@ export function ChartPanel({ symbol }: Props) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, dark, overlayHandlers]);
+  }, [symbol, dark, overlayHandlers, levels]);
 
   // ---- imperative updates ------------------------------------------------
   useEffect(() => {

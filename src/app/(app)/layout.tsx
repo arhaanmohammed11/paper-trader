@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { TickerSearch } from "@/components/market/TickerSearch";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -31,10 +33,16 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-black/10 dark:border-white/15">
-        <nav className="mx-auto flex w-full max-w-5xl items-center gap-6 px-6 py-3">
+        <nav className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3">
           <Link href="/dashboard" className="font-semibold tracking-tight">
             Paper Trader
           </Link>
+
+          {/* Search lives in the nav so you can jump straight from one stock to
+              another without going back to the dashboard. */}
+          <div className="order-last w-full sm:order-none sm:w-auto sm:min-w-64 sm:flex-1">
+            <TickerSearch />
+          </div>
           <Link
             href="/history"
             className="text-sm text-black/60 underline-offset-4 hover:underline dark:text-white/60"

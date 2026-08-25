@@ -21,12 +21,16 @@ const STORAGE_KEY = "pt.chartEngine";
  *   from, so the chart and the fill price agree, and drawings persist per
  *   symbol across your devices.
  */
+type Level = { id: string; price: number; kind: string; label: string | null };
+
 export function ChartSwitcher({
   symbol,
   exchange,
+  levels = [],
 }: {
   symbol: string;
   exchange: string | null;
+  levels?: Level[];
 }) {
   // Defaults to TradingView; remembers whatever you picked last.
   const [engine, choose] = useStoredChoice<Engine>(
@@ -70,7 +74,7 @@ export function ChartSwitcher({
       {engine === "tradingview" ? (
         <TradingViewChart symbol={symbol} exchange={exchange} />
       ) : (
-        <ChartPanel symbol={symbol} />
+        <ChartPanel symbol={symbol} levels={levels} />
       )}
     </div>
   );

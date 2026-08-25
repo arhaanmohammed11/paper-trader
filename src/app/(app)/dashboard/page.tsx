@@ -1,5 +1,4 @@
 import { NewsPanel } from "@/components/news/NewsPanel";
-import { TickerSearch } from "@/components/market/TickerSearch";
 import {
   PositionsTable,
   type PositionRow,
@@ -107,8 +106,6 @@ export default async function DashboardPage() {
           Signed in as {user?.email}
         </p>
       </div>
-
-      <TickerSearch />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard label="Total equity" value={formatMoney(equity)} primary />

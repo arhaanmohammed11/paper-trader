@@ -16,7 +16,13 @@ type Match = {
 /** Results are stored WITH the query they belong to. */
 type Result = { query: string; matches: Match[] };
 
-export function TickerSearch({ autoFocus = false }: { autoFocus?: boolean }) {
+export function TickerSearch({
+  autoFocus = false,
+  compact = false,
+}: {
+  autoFocus?: boolean;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const listId = useId();
   const [query, setQuery] = useState("");
@@ -112,8 +118,8 @@ export function TickerSearch({ autoFocus = false }: { autoFocus?: boolean }) {
         }}
         onFocus={() => setDismissed(false)}
         onKeyDown={onKeyDown}
-        placeholder="Search a ticker or company — AAPL, Tesla…"
-        className="h-11 w-full rounded-lg border border-black/15 bg-transparent px-3 text-sm
+        placeholder={compact ? "Search…" : "Search a ticker or company — AAPL, Tesla…"}
+        className="h-9 w-full rounded-lg border border-black/15 bg-transparent px-3 text-sm
                    placeholder:text-black/35 focus:border-emerald-500 focus:outline-none
                    dark:border-white/20 dark:placeholder:text-white/35"
       />

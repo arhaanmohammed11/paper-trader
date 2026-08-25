@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ChartSwitcher } from "@/components/market/ChartSwitcher";
 import { WatchButtons } from "@/components/market/WatchButtons";
 import { NewsPanel } from "@/components/news/NewsPanel";
+import { PriceLevels } from "@/components/market/PriceLevels";
 import { TradeTicket } from "@/components/trade/TradeTicket";
 
 import { getQuotes } from "@/lib/market/cache";
@@ -45,6 +46,12 @@ export default async function StockPage({ params }: PageProps<"/stock/[symbol]">
   const { data: account } = await supabase
     .rpc("get_or_create_account")
     .single<{ id: string; cash: number }>();
+
+  const { data: levels } = await supabase
+    .from("price_levels")
+    .select("id, symbol, price, label, kind")
+    .eq("symbol", symbol)
+    .order("price", { ascending: false });
 
   const { data: position } = await supabase
     .from("positions")
@@ -145,7 +152,28 @@ export default async function StockPage({ params }: PageProps<"/stock/[symbol]">
         <Stat label="Prev close" value={formatMoney(quote.prevClose)} />
       </dl>
 
-      <ChartSwitcher symbol={symbol} exchange={instrument?.exchange ?? null} />
+      <ChartSwitcher
+        symbol={symbol}
+        exchange={instrument?.exchange ?? null}
+        levels={(levels ?? []).map((l) => ({
+          id: l.id,
+          price: Number(l.price),
+          kind: l.kind,
+          label: l.label,
+        }))}
+      />
+
+      <PriceLevels
+        symbol={symbol}
+        currentPrice={quote.price}
+        levels={(levels ?? []).map((l) => ({
+          id: l.id,
+          symbol: l.symbol,
+          price: Number(l.price),
+          label: l.label,
+          kind: l.kind as "support" | "resistance" | "target" | "stop" | "note",
+        }))}
+      />
 
       <NewsPanel symbol={symbol} />
 
