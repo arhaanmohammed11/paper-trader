@@ -10,6 +10,7 @@ import {
   INDICATORS,
   INTERVALS,
   RANGES,
+  TOOL_GROUPS,
   type ChartStyle,
   type IntervalId,
   type RangeId,
@@ -20,6 +21,7 @@ import {
   rangeById,
 } from "@/lib/market/chartConfig";
 import { klineSync, loadKLine } from "@/lib/market/klineLoader";
+import { registerShapes } from "@/lib/market/shapes";
 
 // For the eventual TradingView swap: everything here talks to
 // /api/market/history, which already speaks TradingView's resolution vocabulary
@@ -40,6 +42,10 @@ export function ChartPanel({ symbol }: Props) {
   // No indicators by default — a clean chart. Add them from the Indicators menu.
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
   const [armedTool, setArmedTool] = useState<string | null>(null);
+  // Magnet snaps each point to the nearest OHLC value. Useful for drawing a
+  // trend line off exact highs; actively in the way when boxing an arbitrary
+  // region. Off by default, as in TradingView.
+  const [magnet, setMagnet] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menu, setMenu] = useState<"draw" | "indicator" | null>(null);
@@ -54,6 +60,7 @@ export function ChartPanel({ symbol }: Props) {
   // createOverlay fires the same callbacks a human drawing would, so without
   // this the restore would race the save and could persist a half-restored set.
   const restoringRef = useRef(false);
+  const magnetRef = useRef(magnet);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -148,7 +155,10 @@ export function ChartPanel({ symbol }: Props) {
     let cancelled = false;
     const handlers = overlayHandlers();
 
-    loadKLine().then(({ init }) => {
+    loadKLine().then((kline) => {
+      const { init } = kline;
+      // Shapes are custom templates; they must exist before any is created.
+      registerShapes(kline);
       // Cleanup already ran (StrictMode unmounts immediately on first mount).
       // Initialising here would leave an orphaned chart on the DOM node — two
       // live charts on one element, which is what "resets every two seconds and
@@ -311,7 +321,7 @@ export function ChartPanel({ symbol }: Props) {
                 points: o.points,
                 styles: o.styles,
                 lock: o.lock,
-                mode: o.mode ?? "weak_magnet",
+                mode: o.mode ?? "normal",
                 ...handlers,
               });
             }
@@ -354,6 +364,10 @@ export function ChartPanel({ symbol }: Props) {
     chartRef.current?.setStyles({ candle: { type: style } });
   }, [style]);
 
+  useEffect(() => {
+    magnetRef.current = magnet;
+  }, [magnet]);
+
   function pickRange(next: RangeId) {
     setRange(next);
     if (!isCombinationAllowed(interval, next)) setIntervalId(defaultIntervalFor(next));
@@ -364,7 +378,7 @@ export function ChartPanel({ symbol }: Props) {
     setArmedTool(name);
     chartRef.current?.createOverlay({
       name,
-      mode: "weak_magnet", // snaps to OHLC when close, like TradingView
+      mode: magnetRef.current ? "weak_magnet" : "normal",
       ...overlayHandlers(),
     });
   }
@@ -392,6 +406,8 @@ export function ChartPanel({ symbol }: Props) {
         range={range}
         style={style}
         menu={menu}
+        magnet={magnet}
+        onMagnet={setMagnet}
         activeIndicators={activeIndicators}
         loading={loading}
         onInterval={setIntervalId}
@@ -436,6 +452,8 @@ function Toolbar(props: {
   range: RangeId;
   style: ChartStyle;
   menu: "draw" | "indicator" | null;
+  magnet: boolean;
+  onMagnet: (v: boolean) => void;
   activeIndicators: string[];
   loading: boolean;
   onInterval: (i: IntervalId) => void;
@@ -534,19 +552,41 @@ function Toolbar(props: {
 
       {props.menu === "draw" && (
         <Dropdown>
-          {DRAWING_TOOLS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => props.onDraw(t.id)}
-              className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-xs hover:bg-black/[0.05] dark:hover:bg-white/10"
-            >
-              <span className="font-medium">{t.label}</span>
-              <span className="ml-auto text-[10px] text-black/40 dark:text-white/40">
-                {t.hint}
-              </span>
-            </button>
-          ))}
+          <label className="flex cursor-pointer items-center gap-2 border-b border-black/10 px-3 py-2 text-xs dark:border-white/15">
+            <input
+              type="checkbox"
+              checked={props.magnet}
+              onChange={(e) => props.onMagnet(e.target.checked)}
+              className="size-3.5 accent-emerald-600"
+            />
+            <span className="font-medium">Magnet</span>
+            <span className="ml-auto text-[10px] text-black/40 dark:text-white/40">
+              snap to candle highs/lows
+            </span>
+          </label>
+
+          <div className="max-h-80 overflow-y-auto">
+            {TOOL_GROUPS.map((group) => (
+              <div key={group}>
+                <p className="bg-black/[0.03] px-3 py-1 text-[10px] uppercase tracking-wide text-black/40 dark:bg-white/[0.05] dark:text-white/40">
+                  {group}
+                </p>
+                {DRAWING_TOOLS.filter((t) => t.group === group).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => props.onDraw(t.id)}
+                    className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-xs hover:bg-black/[0.05] dark:hover:bg-white/10"
+                  >
+                    <span className="font-medium">{t.label}</span>
+                    <span className="ml-auto text-[10px] text-black/40 dark:text-white/40">
+                      {t.hint}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
         </Dropdown>
       )}
 

@@ -108,25 +108,43 @@ export const CHART_STYLES: { id: ChartStyle; label: string }[] = [
   { id: "area", label: "Line" },
 ];
 
-/** Drawing tools, by klinecharts overlay name. */
+/**
+ * Drawing tools.
+ *
+ * `group` drives the menu sections. Names must match a REGISTERED klinecharts
+ * overlay: the library's own sixteen, or one of the shapes we register in
+ * lib/market/shapes.ts. A name with no template silently does nothing when
+ * created — which is how rect/circle/polygon sat in this menu doing nothing.
+ */
 export const DRAWING_TOOLS: {
   id: string;
   label: string;
   hint: string;
+  group: "Lines" | "Shapes" | "Marks";
 }[] = [
-  { id: "segment", label: "Trend line", hint: "Two clicks: start and end" },
-  { id: "rayLine", label: "Ray", hint: "Extends past the second point" },
-  { id: "straightLine", label: "Extended line", hint: "Extends both ways" },
-  { id: "horizontalStraightLine", label: "Horizontal", hint: "Support / resistance" },
-  { id: "verticalStraightLine", label: "Vertical", hint: "Mark an event" },
-  { id: "priceLine", label: "Price label", hint: "Horizontal line with its price" },
-  { id: "rect", label: "Rectangle", hint: "Box a range" },
-  { id: "circle", label: "Circle", hint: "Ring a point" },
-  { id: "polygon", label: "Polygon", hint: "Click points, double-click to close" },
-  { id: "parallelStraightLine", label: "Parallel channel", hint: "Two parallel lines" },
-  { id: "priceChannelLine", label: "Price channel", hint: "Three-point channel" },
-  { id: "fibonacciLine", label: "Fibonacci", hint: "Retracement levels" },
+  // --- lines (built in) ---
+  { id: "segment", label: "Trend line", hint: "2 clicks", group: "Lines" },
+  { id: "rayLine", label: "Ray", hint: "2 clicks, extends forward", group: "Lines" },
+  { id: "straightLine", label: "Extended line", hint: "2 clicks, extends both ways", group: "Lines" },
+  { id: "horizontalStraightLine", label: "Horizontal line", hint: "1 click", group: "Lines" },
+  { id: "verticalStraightLine", label: "Vertical line", hint: "1 click", group: "Lines" },
+  { id: "horizontalSegment", label: "Horizontal segment", hint: "2 clicks", group: "Lines" },
+  { id: "priceLine", label: "Price label", hint: "1 click, shows the price", group: "Lines" },
+  { id: "parallelStraightLine", label: "Parallel channel", hint: "3 clicks", group: "Lines" },
+  { id: "priceChannelLine", label: "Price channel", hint: "3 clicks", group: "Lines" },
+  { id: "fibonacciLine", label: "Fibonacci", hint: "2 clicks", group: "Lines" },
+  // --- shapes (registered in lib/market/shapes.ts) ---
+  { id: "rectangle", label: "Rectangle", hint: "2 clicks: opposite corners", group: "Shapes" },
+  { id: "circleShape", label: "Circle", hint: "2 clicks: centre, then edge", group: "Shapes" },
+  { id: "triangle", label: "Triangle", hint: "3 clicks", group: "Shapes" },
+  { id: "parallelogram", label: "Parallelogram", hint: "3 clicks", group: "Shapes" },
+  // --- marks (built in) ---
+  { id: "brush", label: "Freehand", hint: "click and drag", group: "Marks" },
+  { id: "simpleAnnotation", label: "Note", hint: "1 click", group: "Marks" },
+  { id: "simpleTag", label: "Axis tag", hint: "1 click", group: "Marks" },
 ];
+
+export const TOOL_GROUPS = ["Lines", "Shapes", "Marks"] as const;
 
 export const INDICATORS: { id: string; label: string; overlay: boolean }[] = [
   { id: "MA", label: "Moving average", overlay: true },
