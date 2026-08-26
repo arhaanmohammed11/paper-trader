@@ -141,7 +141,7 @@ export function TradingViewChart({
       <div
         id={containerId}
         ref={holder}
-        className="h-[520px] w-full sm:h-[620px]"
+        className="h-[400px] w-full sm:h-[600px]"
       />
     </div>
   );

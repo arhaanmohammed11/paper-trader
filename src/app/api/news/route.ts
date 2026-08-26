@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { companyNews, marketNews, newsForSymbols } from "@/lib/news/finnhub";
+import { rankArticles, summarizeSignal } from "@/lib/news/rank";
 import { bucketBySector } from "@/lib/news/sectors";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -31,7 +33,24 @@ export async function GET(request: Request) {
       if (!symbol) {
         return NextResponse.json({ error: "NO_SYMBOL" }, { status: 400 });
       }
-      return NextResponse.json({ articles: await companyNews(symbol, 14) });
+
+      const admin = createAdminClient();
+      const { data: instrument } = await admin
+        .from("instruments")
+        .select("name")
+        .eq("symbol", symbol)
+        .maybeSingle();
+      const companyName = instrument?.name || symbol;
+
+      // Rank first, then summarise. The model only ever sees the ten headlines
+      // the reader sees, so the overview cannot cite something off-screen.
+      const raw = await companyNews(symbol, 14);
+      const ranked = rankArticles(raw, symbol, companyName, 10);
+
+      return NextResponse.json({
+        articles: ranked,
+        signal: summarizeSignal(ranked, raw.length),
+      });
     }
 
     if (tab === "mine") {

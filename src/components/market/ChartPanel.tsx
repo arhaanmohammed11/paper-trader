@@ -473,7 +473,7 @@ export function ChartPanel({ symbol, levels = [] }: Props) {
         </p>
       )}
 
-      <div ref={containerRef} className="h-[420px] w-full sm:h-[520px]" />
+      <div ref={containerRef} className="h-[340px] w-full sm:h-[480px]" />
     </section>
   );
 }
@@ -495,17 +495,21 @@ function Toolbar(props: {
   onIndicator: (id: string) => void;
   onClear: () => void;
 }) {
+  // Taller and wider on touch screens: px-2.5 py-1 is a ~26px target, well
+  // under the ~44px a finger needs. Rows scroll sideways rather than wrapping,
+  // so the toolbar stays two lines instead of six on a narrow phone.
   const btn =
-    "rounded-md px-2.5 py-1 font-mono text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-30";
+    "shrink-0 rounded-md px-3 py-2 font-mono text-xs transition-colors " +
+    "disabled:cursor-not-allowed disabled:opacity-30 sm:px-2.5 sm:py-1";
   const on = "bg-emerald-600 text-white";
   const off =
     "text-black/60 hover:bg-black/[0.06] dark:text-white/60 dark:hover:bg-white/10";
   const label =
-    "pr-1 text-[10px] uppercase tracking-wide text-black/35 dark:text-white/35";
+    "shrink-0 pr-1 text-[10px] uppercase tracking-wide text-black/35 dark:text-white/35";
 
   return (
     <div className="relative space-y-1.5 border-b border-black/10 p-2 dark:border-white/15">
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <span className={label}>Interval</span>
         {INTERVALS.map((i) => {
           const allowed = isCombinationAllowed(i.id, props.range);
@@ -533,7 +537,7 @@ function Toolbar(props: {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <span className={label}>Range</span>
         {RANGES.map((r) => (
           <button
@@ -547,7 +551,7 @@ function Toolbar(props: {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="-mx-1 flex items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <span className={label}>Style</span>
         {CHART_STYLES.map((s) => (
           <button
@@ -650,7 +654,7 @@ function Toolbar(props: {
 
 function Dropdown({ children }: { children: React.ReactNode }) {
   return (
-    <div className="absolute right-2 top-full z-30 mt-1 w-64 overflow-hidden rounded-lg border border-black/10 bg-white shadow-xl dark:border-white/15 dark:bg-neutral-900">
+    <div className="absolute right-2 top-full z-30 mt-1 w-[min(16rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-black/10 bg-white shadow-xl dark:border-white/15 dark:bg-neutral-900">
       {children}
     </div>
   );
